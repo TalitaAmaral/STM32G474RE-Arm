@@ -198,38 +198,46 @@ void yield(void) {
 }
 
 
+
 void OSSemaphore::wait(void){
-    __disable_irq();
-    count--; // tira creditos
+    __asm volatile ("cpsid i"); // Desabilita interrupções de forma segura
+    count--;
 
     if (count < 0){
-        bloqueados[fim] = OS_curr; // add a tarefa atual na fila
+        // 1. Guarda a tarefa atual na fila
+        bloqueados[fim] = rtos::OS_curr;
         fim = (fim + 1) % 32;
 
-        OS_readySet &= ~(1U << (OS_currIdx - 1U));
-        OS_sched();
+        // 2. Desliga o bit correto seguindo a regra matemática do professor: (Idx - 1)
+        rtos::OS_readySet &= ~(1U << (rtos::OS_currIdx - 1U));
+
+        rtos::OS_sched();
     }
-    __enable_irq();
+    __asm volatile ("cpsie i"); // Reabilita interrupções
 }
 
 void OSSemaphore::signal(void){
-    __disable_irq();
-    count++; //adiciona creditos
+    __asm volatile ("cpsid i");
+    count++;
 
     if (count <= 0){
-        OSThread* tarefa = bloqueados[inicio];
+        // 1. Retira a tarefa da fila
+        rtos::OSThread* tarefa_acordada = bloqueados[inicio];
         inicio = (inicio + 1) % 32;
 
-        for (uint8_t i = 1; i < OS_threadNum; i++){
-            if (OS_thread[i] == tarefa){
-                OS_readySet |= (1U << (i - 1U));
+        // 2. Encontra a tarefa no vetor para descobrir o seu índice 'i'
+        for (uint8_t i = 1; i < rtos::OS_threadNum; i++){
+            if (rtos::OS_thread[i] == tarefa_acordada){
+                // 3. Liga o bit exato seguindo a regra do professor: (i - 1)
+                rtos::OS_readySet |= (1U << (i - 1U));
                 break;
             }
         }
-        OS_sched();
+        rtos::OS_sched();
     }
-    __enable_irq();
+    __asm volatile ("cpsie i");
 }
+
 
 
 
