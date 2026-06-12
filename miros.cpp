@@ -197,6 +197,10 @@ void yield(void) {
     __asm volatile ("cpsie i");
 }
 
+OSSemaphore::OSSemaphore(int16_t initialCount) : count(initialCount), inicio(0), fim(0){
+    Q_REQUIRE(initialCount >= 0);
+}
+	
 void OSSemaphore::wait(void){
     __asm volatile ("cpsid i");
     count--;
