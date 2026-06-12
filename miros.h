@@ -20,7 +20,6 @@ typedef struct {
 class OSSemaphore{
 public:
 	explicit OSSemaphore(int16_t initialCount);
-	
 	void wait(void);
 	void signal(void);
 
