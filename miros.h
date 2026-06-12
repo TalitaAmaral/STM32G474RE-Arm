@@ -19,9 +19,7 @@ typedef struct {
 
 class OSSemaphore{
 public:
-	explicit OSSemaphore(int16_t initialCount): count(initialCount), inicio(0), fim(0){
-		Q_REQUIRE(initialCount >= 0);
-	}
+	explicit OSSemaphore(int16_t initialCount);
 	
 	void wait(void);
 	void signal(void);
