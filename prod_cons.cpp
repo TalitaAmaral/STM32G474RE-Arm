@@ -2,7 +2,7 @@
 
 class OSComunication {
 private:
-    static const uint8_t n = 10;
+    static const uint8_t n = 10; // correção de sintaxe
     int32_t Buffer[n];
     
     uint8_t inicio = 0; // escrita (produtor)
@@ -32,7 +32,7 @@ void OSComunication::write(int32_t value){
     full.signal();
 }
 
-int32_t OSComunication::read(){
+int32_t OSComunication::read(){ // correção de sintaxe
     full.wait();
     mutex.wait();
 
