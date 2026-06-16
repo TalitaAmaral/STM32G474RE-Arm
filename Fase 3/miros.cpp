@@ -206,27 +206,30 @@ void OSSemaphore::signal(void){
 
 
 // funções adicionadas para prod cons
-
 void OSComunication::write(int32_t value){
-	int32_t *ptr = Buffer;
-	s.wait();
-	for(uint8_t i = (10 - spaces); i > 0; i--){
-		ptr[i] = ptr[i - 1];
-	} ptr[0] = value;
-	spaces--;
-	s.signal();
+    empty.wait(); 
+    mutex.wait();
+
+    // região crítica com fifo circular
+    Buffer[inicio] = value;
+    inicio = (inicio + 1) % n;
+
+    mutex.signal();
+    full.signal();
 }
 
-int32_t OSComunication::read(){
-	int32_t *ptr = Buffer;
-	int32_t value;
-	s.wait();
-	value = ptr[9 - spaces];
-	spaces++;
-	s.signal();
-	return value;
-}
+int32_t OSComunication::read(){ // correção de sintaxe
+    full.wait();
+    mutex.wait();
 
+    // região crítica com fifo circular
+    int32_t value = Buffer[fim];
+    fim = (fim + 1) % n;
+
+    mutex.signal();
+    empty.signal();
+    return value;
+}
 // fim fuções adicionadas para prod cons
 
 
