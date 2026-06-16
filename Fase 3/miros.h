@@ -30,17 +30,22 @@ private:
 
 
 // classe para prod cons
-class OSComunication{
-public:
-	explicit OSComunication() : s(10), spaces(10) {}
-	void write(int32_t value);
-	int32_t read(void);
-
+class OSComunication {
 private:
-	static const uint8_t n = 10;
-	int32_t Buffer[n];
-	OSSemaphore s;
-	uint8_t spaces;
+    static const uint8_t n = 10; // correção de sintaxe
+    int32_t Buffer[n];
+    
+    uint8_t inicio = 0; // escrita (produtor)
+    uint8_t fim = 0;   // leitura (consumidor)
+
+    OSSemaphore empty;
+    OSSemaphore full;
+    OSSemaphore mutex;
+
+public:
+    explicit OSComunication() : empty(n), full(0), mutex(1) {}
+    void write(int32_t value);
+    int32_t read(void);
 };
 //fim classe para prod cos
 
