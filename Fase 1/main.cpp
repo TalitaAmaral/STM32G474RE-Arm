@@ -54,17 +54,6 @@ int main(void){
 	                 &main_blinky3,
 	                 stack_blinky3, sizeof(stack_blinky3));
 
-
-	  // teste prod cons
-	  rtos::OSThread_start(&produtor_thread,
-	                 &main_produtor,
-	                 stack_produtor, sizeof(stack_produtor));
-
-	        /* start consumidor thread */
-	  rtos::OSThread_start(&consumidor_thread,
-	                 &main_consumidor,
-	                 stack_consumidor, sizeof(stack_consumidor));
-
 	  /* transfer control to the RTOS to run the threads */
 	  rtos::OS_run();
 }
