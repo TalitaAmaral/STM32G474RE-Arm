@@ -8,9 +8,14 @@ typedef struct {
     void *sp; /* stack pointer */
     uint32_t timeout; /* timeout delay down-counter */
     /* ... other attributes associated with a thread */
+	
+	// variáveis adicionadas
+	uint32_t periodo;
+	uint32_t deadline;
 } OSThread;
 
-
+// contador adicionado
+extern uint32_t OS_global_tick;
 
 // classe adicionada semaforo
 class OSSemaphore{
