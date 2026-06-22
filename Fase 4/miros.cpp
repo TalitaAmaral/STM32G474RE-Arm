@@ -19,6 +19,7 @@ uint8_t OS_currIdx; /* current thread index for the circular array */
 // inicializa o contador global
 uint32_t OS_global_ticks = 0;
 
+
 OSThread idleThread;
 void main_idleThread() {
     while (1) {
@@ -40,36 +41,35 @@ void OS_sched(void) {
     if (OS_readySet == 0U) { /* idle condition? */
     	OS_currIdx = 0U; /* the idle thread */
     } else {
-      // alteração para a prioridade dinâmica do EDF
 
-      uint32_t min_deadline = 0xFFFFFFFFU;
-      uint8_t best_id = 0;
+		// alteração para o EDF
+		uint32_t menor_dl = 0xFFFFFFFFU;
+      	uint8_t menor_id = 0;
 
-      for(uint8_t i=1; i<OS_threadNum; i++){
-        if(OS_readySet & (1U <<(i - 1U)){
-          if(OS_thread[i]->deadline < min_deadline){
-            min_deadline = OS_thread[i]->deadline;
-            best_idx = i;
-          }
-        }
-      }
-      
-    	/*do{ // find the next ready thread
+      	for(uint8_t i=1; i<OS_threadNum; i++){
+        	if(OS_readySet & (1U <<(i - 1U))){
+          		if(OS_thread[i]->deadline < menor_dl){
+            	menor_dl = OS_thread[i]->deadline;
+            	menor_id = i;
+          		}
+        	}
+      	}
+		// fim alteração para o EDF
+		
+    	/* anteriormente esse trecho era para prioridade estática 
+		do{ // find the next ready thread
             OS_currIdx++;
             if(OS_currIdx == OS_threadNum){
             	OS_currIdx = 1;
             }
             OS_next = OS_thread[OS_currIdx];
-    	}
-    while((OS_readySet & (1U <<(OS_currIdx - 1U))) == 0 );
+    	}while((OS_readySet & (1U <<(OS_currIdx - 1U))) == 0 );
     }*/
-  
+		
     OS_next = OS_thread[OS_currIdx];
-
     /* trigger PendSV, if needed */
     if(OS_next != OS_curr){
-    	SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-      //*(uint32_t volatile *)0xE000ED04 = (1U << 28);
+    	*(uint32_t volatile *)0xE000ED04 = (1U << 28);
     }
 }
 
@@ -87,7 +87,7 @@ void OS_run(void) {
 
 void OS_tick(void) {
 	// incrementa contador global
-  OS_global_tick++;
+  OS_global_ticks++;
   
   uint8_t n = 0;
 	for(n = 1U; n < OS_threadNum; n++){ /* cycle through every thread but the idle */
@@ -103,6 +103,8 @@ void OS_tick(void) {
           // calcula o deadline
           OS_thread[n]->deadline = OS_global_ticks + OS_thread[n]->period;
         }
+		// fim adição
+		  
         OS_readySet |= (1U << (n-1U));	/* if the thread is ready mask the corresponding bit */
 			}
 		}
@@ -124,7 +126,8 @@ void OS_delay(uint32_t ticks) {
 void OSThread_start(
     OSThread *me,
     OSThreadHandler threadHandler,
-    void *stkSto, uint32_t stkSize)
+    void *stkSto, uint32_t stkSize
+    uint8_t periodo) // adição da varíavel periodo
 {
     /* round down the stack top to the 8-byte boundary
     * NOTE: ARM Cortex-M stack grows down from hi -> low memory
@@ -166,6 +169,12 @@ void OSThread_start(
         *sp = 0xDEADBEEFU;
     }
 
+    // adição
+	me->periodo = periodo;
+    me->timeout = periodo;
+    me->deadline = OS_global_ticks + periodo;
+	// fim adição
+
     /* register the thread with the OS */
     OS_thread[OS_threadNum] = me;
     /* make the thread ready to run */
@@ -191,15 +200,12 @@ void OS_onIdle(void) {
 
 
 // funções adicionadas para o escalonador
-
 void OS_wait_period(void){
     __disable_irq();
-    // remove a thread atual da lista de prontas até OS_tick() recarregar o período dela
     OS_readySet &= ~(1U << (OS_currIdx - 1U));
-    OS_sched(); // passa para a próxima tarefa do EDF
+    OS_sched();
     __enable_irq();
 }
-
 
 void yield(void) {
     __asm volatile ("cpsid i");
