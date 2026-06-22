@@ -14,6 +14,7 @@ typedef struct {
 	uint32_t deadline;
 } OSThread;
 
+
 // contador adicionado
 extern uint32_t OS_global_tick;
 
@@ -31,8 +32,6 @@ private:
 	uint8_t fim;
 };
 //fim classe adicionada semaforo
-
-
 
 // classe para prod cons
 class OSComunication {
@@ -67,7 +66,12 @@ void OS_onIdle(void);
 /* this function must be called with interrupts DISABLED */
 void OS_sched(void);
 
+
+// funções adicionadas
+void OS_wait_period(void)
 void yield(void);
+// fim funções adicionadas
+
 
 /* transfer control to the RTOS to run the threads */
 void OS_run(void);
