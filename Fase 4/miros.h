@@ -88,7 +88,8 @@ void OS_onStartup(void);
 void OSThread_start(
     OSThread *me,
     OSThreadHandler threadHandler,
-    void *stkSto, uint32_t stkSize);
+    void *stkSto, uint32_t stkSize,
+	uint8_t periodo); // adição da variável periodo
 
 } // fim namespace rtos
 
