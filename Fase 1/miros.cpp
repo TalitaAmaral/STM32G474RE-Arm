@@ -160,14 +160,11 @@ void OS_onIdle(void) {
 
 
 // funções adicionadas para o semáforo
+
 void yield(void) {
-    __asm volatile ("cpsid i");
-
-    OS_sched();
-
-    __asm volatile ("cpsie i");
+    SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
 }
-
+	
 OSSemaphore::OSSemaphore(int16_t initialCount) : count(initialCount), inicio(0), fim(0){
     Q_REQUIRE(initialCount >= 0);
 }
