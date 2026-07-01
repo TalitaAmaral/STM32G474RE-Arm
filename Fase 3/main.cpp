@@ -20,7 +20,7 @@ void main_consumidor(void);
 
 uint32_t conta0=0, conta1=0, conta2=0;
 
-uint32_t stack_blinky1[40];
+uint32_t stack_blinky1[256];
 rtos::OSThread blinky1;
 void main_blinky1() {
     while (1) {
@@ -29,7 +29,7 @@ void main_blinky1() {
     }
 }
 
-uint32_t stack_blinky2[40];
+uint32_t stack_blinky2[256];
 rtos::OSThread blinky2;
 void main_blinky2() {
     while (1) {
@@ -38,7 +38,7 @@ void main_blinky2() {
     }
 }
 
-uint32_t stack_blinky3[40];
+uint32_t stack_blinky3[256];
 rtos::OSThread blinky3;
 void main_blinky3() {
     while (1) {
@@ -47,7 +47,7 @@ void main_blinky3() {
     }
 }
 
-uint32_t stack_idleThread[40];
+uint32_t stack_idleThread[256];
 
 
 int main(void){
@@ -88,25 +88,24 @@ int main(void){
 
 
 // teste prod cons
+
+int32_t produzido = 0;
+int32_t consumido = 0;
+
 void main_produtor(void) {
-    int32_t item = 100;
+    int32_t item = 0;
     while(1) {
         item++;
         comunicacao_teste.write(item);
+        produzido = item;
         rtos::OS_delay(500); // Produtor lento
     }
 }
 
 void main_consumidor(void) {
-    int32_t dado_recebido = 0;
     while(1) {
-        dado_recebido = comunicacao_teste.read();
-
-        // Usamos a variável aqui para sumir com aquele warning do compilador
-        (void)dado_recebido;
-
+    	consumido = comunicacao_teste.read();
         rtos::OS_delay(50);  // Consumidor rápido
     }
 }
 // fim teste
-
