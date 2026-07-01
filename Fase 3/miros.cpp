@@ -186,7 +186,10 @@ void OSSemaphore::wait(void){
         bloqueados[fim] = OS_curr;
         fim = (fim + 1) % 32;
         OS_readySet &= ~(1U << (OS_currIdx - 1U));
-        OS_sched();
+
+		SEGGER_SYSVIEW_OnTaskStopExec();
+		
+		OS_sched();
     }
     __asm volatile ("cpsie i");
 }
@@ -205,7 +208,10 @@ void OSSemaphore::signal(void){
                 break;
             }
         }
-        OS_sched();
+
+		SEGGER_SYSVIEW_OnTaskStartReady((uint32_t)blockedThread);
+		
+		OS_sched();
     }
     __asm volatile ("cpsie i");
 }
