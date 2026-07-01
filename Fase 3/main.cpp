@@ -1,6 +1,7 @@
 #include "main.h"
 #include <cstdint>
 #include "miros.h"
+#include "SEGGER_SYSVIEW.h"
 
 
 //teste para prod cons
@@ -79,7 +80,7 @@ int main(void){
 	                 &main_consumidor,
 	                 stack_consumidor, sizeof(stack_consumidor));
 
-
+	  SEGGER_SYSVIEW_Start();
 
 	  /* transfer control to the RTOS to run the threads */
 	  rtos::OS_run();
