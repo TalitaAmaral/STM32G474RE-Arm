@@ -13,10 +13,9 @@ typedef struct {
 	uint32_t periodo;
 	uint32_t deadline;
 } OSThread;
-
-
 // contador adicionado
 extern uint32_t OS_global_tick;
+
 
 // classe adicionada semaforo
 class OSSemaphore{
