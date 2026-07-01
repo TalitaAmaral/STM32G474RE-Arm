@@ -185,7 +185,7 @@ void DebugMon_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-  SEGGER_SYSVIEW_RecordEnterISR(15);
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
