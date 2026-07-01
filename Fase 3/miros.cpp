@@ -50,10 +50,10 @@ void OS_sched(void) {
     }
     OS_next = OS_thread[OS_currIdx];
 
-	SEGGER_SYSVIEW_OnTaskStartExec((uint32_t)OS_curr);
-
     /* trigger PendSV, if needed */
     if(OS_next != OS_curr){
+		SEGGER_SYSVIEW_OnTaskStartExec((uint32_t)OS_next);
+		
     	*(uint32_t volatile *)0xE000ED04 = (1U << 28);
     }
 }
@@ -209,7 +209,7 @@ void OSSemaphore::signal(void){
             }
         }
 
-		SEGGER_SYSVIEW_OnTaskStartReady((uint32_t)blockedThread);
+		SEGGER_SYSVIEW_OnTaskStartReady((uint32_t)tarefa);
 		
 		OS_sched();
     }
