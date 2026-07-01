@@ -2,6 +2,7 @@
 #include "miros.h"
 #include "qassert.h"
 #include "stm32g4xx.h"
+#include "SEGGER_SYSVIEW.h"
 
 Q_DEFINE_THIS_FILE
 
@@ -32,6 +33,7 @@ void OS_init(void *stkSto, uint32_t stkSize) {
     OSThread_start(&idleThread,
                    &main_idleThread,
                    stkSto, stkSize);
+	SEGGER_SYSVIEW_Conf();
 }
 
 void OS_sched(void) {
@@ -47,6 +49,8 @@ void OS_sched(void) {
     	}while((OS_readySet & (1U <<(OS_currIdx - 1U))) == 0 );
     }
     OS_next = OS_thread[OS_currIdx];
+
+	SEGGER_SYSVIEW_OnTaskStartExec((uint32_t)OS_curr);
 
     /* trigger PendSV, if needed */
     if(OS_next != OS_curr){
@@ -86,6 +90,9 @@ void OS_delay(uint32_t ticks) {
 
     OS_curr->timeout = ticks;
     OS_readySet &= ~(1U << (OS_currIdx - 1U));
+
+	SEGGER_SYSVIEW_OnTaskStopExec();
+	
     OS_sched();
     __asm volatile ("cpsie i");
  }
@@ -142,6 +149,8 @@ void OSThread_start(
         OS_readySet |= (1U << (OS_threadNum - 1U));
     }
     OS_threadNum++;
+
+	SEGGER_SYSVIEW_OnTaskCreate((uint32_t)me);
 }
 /***********************************************/
 void OS_onStartup(void) {
@@ -160,10 +169,9 @@ void OS_onIdle(void) {
 
 
 // funções adicionadas para o escalonador
-void yield(void) {
-    __asm volatile ("cpsid i");
-    OS_sched();
-    __asm volatile ("cpsie i");
+
+void yield(void){
+    *(uint32_t volatile *)0xE000ED04 = (1U << 28);
 }
 
 OSSemaphore::OSSemaphore(int16_t initialCount) : count(initialCount), inicio(0), fim(0){
