@@ -171,12 +171,6 @@ void OS_onIdle(void) {
 
 
 // funções adicionadas para o escalonador
-/*void yield(void) {
-    __asm volatile ("cpsid i");
-    OS_sched();
-    __asm volatile ("cpsie i");
-}*/
-
 void yield(void){
     *(uint32_t volatile *)0xE000ED04 = (1U << 28);
 }
