@@ -90,7 +90,10 @@ void OS_delay(uint32_t ticks) {
 
     OS_curr->timeout = ticks;
     OS_readySet &= ~(1U << (OS_currIdx - 1U));
-    OS_sched();
+
+	SEGGER_SYSVIEW_OnTaskStopExec();
+	
+	OS_sched();
     __asm volatile ("cpsie i");
  }
 
