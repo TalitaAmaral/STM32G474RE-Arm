@@ -1,10 +1,3 @@
-/*
- * miros.h
- *
- *  Created on: Feb 6, 2025
- *      Author: guilh
- */
-
 #ifndef INC_MIROS_H_
 #define INC_MIROS_H_
 
