@@ -90,7 +90,8 @@ void OSThread_start(
     OSThread *me,
     OSThreadHandler threadHandler,
     void *stkSto, uint32_t stkSize,
-	uint8_t periodo); // adição da variável periodo para o EDF
+	uint8_t periodo);
+	// adição da variável periodo para o EDF
 } // fim namespace rtos
 
 #endif /* INC_MIROS_H_ */
