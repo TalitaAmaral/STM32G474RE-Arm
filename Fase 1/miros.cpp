@@ -172,7 +172,6 @@ OSSemaphore::OSSemaphore(int16_t initialCount) : count(initialCount), inicio(0),
 void OSSemaphore::wait(void){
     __asm volatile ("cpsid i");
     count--;
-
     if (count < 0){
         bloqueados[fim] = OS_curr;
         fim = (fim + 1) % 32;
@@ -185,18 +184,16 @@ void OSSemaphore::wait(void){
 void OSSemaphore::signal(void){
     __asm volatile ("cpsid i");
     count++;
-
     if (count <= 0){
         OSThread* tarefa = bloqueados[inicio];
         inicio = (inicio + 1) % 32;
-
         for (uint8_t i = 1; i < OS_threadNum; i++){
             if (OS_thread[i] == tarefa){
                 OS_readySet |= (1U << (i - 1U));
                 break;
             }
         }
-        OS_sched();
+    	OS_sched();
     }
     __asm volatile ("cpsie i");
 }
