@@ -8,14 +8,18 @@ typedef struct {
     void *sp; /* stack pointer */
     uint32_t timeout; /* timeout delay down-counter */
     /* ... other attributes associated with a thread */
-	
-	// variáveis adicionadas
-	uint32_t periodo;
-	uint32_t deadline;
-} OSThread;
-// contador adicionado
-extern uint32_t OS_global_tick;
 
+    // variáveis adicionadas para o EDF
+    uint32_t periodo;
+    uint32_t deadline;
+
+    // variáveis para o trace
+    uint8_t id; // id da thread para o trace
+
+} OSThread;
+
+// contador adicionado
+extern uint32_t OS_global_ticks;
 
 // classe adicionada semaforo
 class OSSemaphore{
@@ -32,12 +36,13 @@ private:
 };
 //fim classe adicionada semaforo
 
+
 // classe para prod cons
 class OSComunication {
 private:
     static const uint8_t n = 10; // correção de sintaxe
     int32_t Buffer[n];
-    
+
     uint8_t inicio = 0; // escrita (produtor)
     uint8_t fim = 0;   // leitura (consumidor)
 
@@ -67,7 +72,7 @@ void OS_sched(void);
 
 
 // funções adicionadas
-void OS_wait_period(void)
+void OS_wait_period(void);
 void yield(void);
 // fim funções adicionadas
 
@@ -88,8 +93,7 @@ void OSThread_start(
     OSThread *me,
     OSThreadHandler threadHandler,
     void *stkSto, uint32_t stkSize,
-	uint8_t periodo); // adição da variável periodo
-
+	uint8_t periodo); // adição da variável periodo para o EDF
 } // fim namespace rtos
 
 #endif /* INC_MIROS_H_ */
