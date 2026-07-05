@@ -8,14 +8,11 @@ typedef struct {
     void *sp; /* stack pointer */
     uint32_t timeout; /* timeout delay down-counter */
     /* ... other attributes associated with a thread */
-
     // variáveis adicionadas para o EDF
     uint32_t periodo;
     uint32_t deadline;
-
     // variáveis para o trace
     uint8_t id; // id da thread para o trace
-
 } OSThread;
 
 // contador adicionado
