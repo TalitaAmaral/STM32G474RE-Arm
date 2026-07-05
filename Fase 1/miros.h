@@ -23,10 +23,8 @@ typedef struct {
 class OSSemaphore{
 public:
 	explicit OSSemaphore(int16_t initialCount);
-
 	void wait(void);
 	void signal(void);
-
 private:
 	int16_t count;
 	OSThread* bloqueados[32];
