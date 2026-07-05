@@ -2,6 +2,33 @@
 #include <cstdint>
 #include "miros.h"
 
+//teste para prod cons
+rtos::OSComunication comunicacao_teste;
+
+int32_t produzido = 0, consumido = 0;
+
+uint32_t stack_produtor[256];
+rtos::OSThread produtor_thread;
+void main_produtor(void) {
+    int32_t item = 0;
+    while(1) {
+        item++;
+        comunicacao_teste.write(item);
+        produzido = item;
+        rtos::OS_delay(500); // produtor lento
+    }
+}
+
+uint32_t stack_consumidor[256];
+rtos::OSThread consumidor_thread;
+void main_consumidor(void) {
+    while(1) {
+    	consumido = comunicacao_teste.read();
+        rtos::OS_delay(50);  // consumidor rápido
+    }
+}
+// fim teste prod cons
+
 
 uint32_t conta0=0, conta1=0, conta2=0;
 
@@ -35,71 +62,24 @@ void main_blinky3() {
 uint32_t stack_idleThread[256];
 
 
-//teste para prod cons
-rtos::OSComunication comunicacao_teste;
-
-uint32_t stack_produtor[256];
-rtos::OSThread produtor_thread;
-void main_produtor(void) {
-    int32_t item = 100;
-    while(1) {
-        item++;
-        comunicacao_teste.write(item);
-        rtos::OS_delay(500); // Produtor lento
-    }
-}
-
-uint32_t stack_consumidor[256];
-rtos::OSThread consumidor_thread;
-void main_consumidor(void){
-    int32_t dado_recebido = 0;
-    while(1) {
-        dado_recebido = comunicacao_teste.read();
-        (void)dado_recebido;
-        rtos::OS_delay(50);
-    }
-}
-// fim teste prod cons
-
-// pilhas e thread para a fase 4
-uint32_t stack_pid[128];
-rtos::OSThread pid_thread;
-// fim pilhas e thread para a fase 4
-
-// adição do controle
-void main_controle_pid() {
-    while (1) {
-        // 1. Lê o sensor de distância
-        // 2. Calcula o PID
-        // 3. Atualiza o PWM do levitador
-        
-        // Finalizou o trabalho! Cede a CPU até o próximo período (ex: 40 ms)
-        rtos::OS_wait_period(); 
-    }
-}
-// fim adição do controle
-
-
 int main(void){
 
 	  rtos::OS_init(stack_idleThread, sizeof(stack_idleThread));
 
-      // adicionamos periodo=0 no final das threads
-	  
 	  /* start blinky1 thread */
 	  rtos::OSThread_start(&blinky1,
 	                 &main_blinky1,
-	                 stack_blinky1, sizeof(stack_blinky1), 0);
+	                 stack_blinky1, sizeof(stack_blinky1), 50);
 
 	  /* start blinky2 thread */
 	  rtos::OSThread_start(&blinky2,
 	                 &main_blinky2,
-	                 stack_blinky2, sizeof(stack_blinky2), 0);
+	                 stack_blinky2, sizeof(stack_blinky2), 70);
 
 	  /* start blinky3 thread */
 	  rtos::OSThread_start(&blinky3,
 	                 &main_blinky3,
-	                 stack_blinky3, sizeof(stack_blinky3), 0);
+	                 stack_blinky3, sizeof(stack_blinky3), 100);
 
 
 	  // teste prod cons
@@ -107,16 +87,11 @@ int main(void){
 	                 &main_produtor,
 	                 stack_produtor, sizeof(stack_produtor), 0);
 
+	        /* start consumidor thread */
 	  rtos::OSThread_start(&consumidor_thread,
 	                 &main_consumidor,
 	                 stack_consumidor, sizeof(stack_consumidor), 0);
-      // fim teste prod cons
-
-	  // inicializa o controle PID passando periodo=40ms (tick do EDF)
-      rtos::OSThread_start(&pid_thread,
-		  			&main_controle_pid,
-		  			stack_pid, sizeof(stack_pid), 40);
-	  // fim controle PID
+	  // fim teste prod cons
 
 	  /* transfer control to the RTOS to run the threads */
 	  rtos::OS_run();
