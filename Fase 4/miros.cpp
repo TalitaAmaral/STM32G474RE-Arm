@@ -2,6 +2,8 @@
 #include "miros.h"
 #include "qassert.h"
 #include "stm32g4xx.h"
+#include "trace.h"
+#include <cstdio>
 
 Q_DEFINE_THIS_FILE
 
@@ -16,7 +18,6 @@ uint32_t OS_readySet; /* bitmask of threads that are ready to run */
 uint8_t OS_threadNum; /* number of threads started */
 uint8_t OS_currIdx; /* current thread index for the circular array */
 
-// inicializa o contador global
 uint32_t OS_global_ticks = 0;
 
 
@@ -28,49 +29,70 @@ void main_idleThread() {
 }
 
 void OS_init(void *stkSto, uint32_t stkSize) {
-    /* set the PendSV interrupt priority to the lowest level 0xFF */
+	/* Ativa o hardware de contagem de ciclos (DWT) e a struct do Trace */
+	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+	DWT->CYCCNT = 0;
+	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+	trace_init(SystemCoreClock);
+
+
+	/* set the PendSV interrupt priority to the lowest level 0xFF */
     *(uint32_t volatile *)0xE000ED20 |= (0xFFU << 16);
 
     /* start idleThread thread */
     OSThread_start(&idleThread,
                    &main_idleThread,
-                   stkSto, stkSize);
+                   stkSto, stkSize, 0);
 }
 
 void OS_sched(void) {
-    if (OS_readySet == 0U) { /* idle condition? */
+	__disable_irq();
+
+	if (OS_readySet == 0U) { /* idle condition? */
     	OS_currIdx = 0U; /* the idle thread */
     } else {
 
-		// alteração para o EDF
-		uint32_t menor_dl = 0xFFFFFFFFU;
-      	uint8_t menor_id = 0;
+    	// alteração para o EDF
+    	uint32_t menor_dl = 0xFFFFFFFFU;
+    	uint8_t menor_id = 0;
 
-      	for(uint8_t i=1; i<OS_threadNum; i++){
-        	if(OS_readySet & (1U <<(i - 1U))){
-          		if(OS_thread[i]->deadline < menor_dl){
-            	menor_dl = OS_thread[i]->deadline;
-            	menor_id = i;
-          		}
-        	}
-      	}
-		// fim alteração para o EDF
-		
-    	/* anteriormente esse trecho era para prioridade estática 
-		do{ // find the next ready thread
+    	for(uint8_t i=1; i<OS_threadNum; i++){
+    		if(OS_readySet & (1U <<(i - 1U))){
+    			if(OS_thread[i]->deadline < menor_dl){
+    				menor_dl = OS_thread[i]->deadline;
+    	            menor_id = i;
+    	        }
+    	    }
+    	}
+
+    	OS_currIdx = menor_id;
+    	/* anteriormente esse trecho era para prioridade estática
+    	do{ //find the next ready thread
             OS_currIdx++;
             if(OS_currIdx == OS_threadNum){
             	OS_currIdx = 1;
             }
             OS_next = OS_thread[OS_currIdx];
-    	}while((OS_readySet & (1U <<(OS_currIdx - 1U))) == 0 );
-    }*/
-		
+    	}while((OS_readySet & (1U <<(OS_currIdx - 1U))) == 0 );*/
+    }
+
+
     OS_next = OS_thread[OS_currIdx];
+
     /* trigger PendSV, if needed */
     if(OS_next != OS_curr){
+
+    	if (OS_curr && (OS_readySet & (1U << (OS_currIdx - 1U)))) {
+    		trace_evt(TR_READY, OS_currIdx);
+    	}
+
+    	trace_evt(TR_RUN, OS_currIdx); // registra que a nova task começou a rodar (troca de contexto)
+
     	*(uint32_t volatile *)0xE000ED04 = (1U << 28);
     }
+
+    __enable_irq();
 }
 
 void OS_run(void) {
@@ -86,30 +108,45 @@ void OS_run(void) {
 }
 
 void OS_tick(void) {
-	// incrementa contador global
-  OS_global_ticks++;
-  
-  uint8_t n = 0;
-	for(n = 1U; n < OS_threadNum; n++){ /* cycle through every thread but the idle */
-    if(OS_thread[n]->timeout != 0U){
-      OS_thread[n]->timeout--;			/* decrease the timeout (por software)*/
-			
-      if(OS_thread[n]->timeout == 0U){
-        
-        // adicioção: tempo passou do tempo do periodo
-        if(OS_thread[n]->periodo > 0U){
-          // coloca o periodo da tarefa no contador
-          OS_thread[n]->timeout = OS_thread[n]->period;
-          // calcula o deadline
-          OS_thread[n]->deadline = OS_global_ticks + OS_thread[n]->period;
-        }
-		// fim adição
-		  
-        OS_readySet |= (1U << (n-1U));	/* if the thread is ready mask the corresponding bit */
+
+	trace_evt(TR_TICK, 0U); // interrupção do hardware
+
+	// incrementa o contador global
+	OS_global_ticks++;
+
+	uint8_t n = 0;
+	for(n=1U;n<OS_threadNum; n++){ 				/* cycle through every thread but the idle */
+		if(OS_thread[n]->timeout != 0U){
+			OS_thread[n]->timeout--;			/* decrease the timeout */
+			if(OS_thread[n]->timeout == 0U){
+
+				// adicioção para o EDF: tempo passou do tempo do periodo
+				if(OS_thread[n]->periodo > 0U){
+					// coloca o periodo da tarefa no contador
+				    OS_thread[n]->timeout = OS_thread[n]->periodo;
+				    // calcula o deadline
+				    OS_thread[n]->deadline = OS_global_ticks + OS_thread[n]->periodo;
+				}
+				// fim adição
+
+				OS_readySet |= (1U << (n-1U));	/* if the thread is ready mask the corresponding bit */
+				
+				trace_evt(TR_READY, n); // marca como pronta
 			}
 		}
 	}
 }
+
+void OS_wait_period(void){
+    __disable_irq();
+    OS_readySet &= ~(1U << (OS_currIdx - 1U));
+
+    trace_evt(TR_BLOCK, OS_currIdx); // marca como bloqueada
+
+    OS_sched();
+    __enable_irq();
+}
+
 
 void OS_delay(uint32_t ticks) {
     __asm volatile ("cpsid i");
@@ -119,6 +156,9 @@ void OS_delay(uint32_t ticks) {
 
     OS_curr->timeout = ticks;
     OS_readySet &= ~(1U << (OS_currIdx - 1U));
+
+    trace_evt(TR_BLOCK, OS_currIdx); // marca como bloqueada
+
     OS_sched();
     __asm volatile ("cpsie i");
  }
@@ -126,10 +166,13 @@ void OS_delay(uint32_t ticks) {
 void OSThread_start(
     OSThread *me,
     OSThreadHandler threadHandler,
-    void *stkSto, uint32_t stkSize
-    uint8_t periodo) // adição da varíavel periodo
+    void *stkSto, uint32_t stkSize,
+	uint8_t periodo)
 {
-    /* round down the stack top to the 8-byte boundary
+
+	//const uint8_t threadNumAtEntry = OS_threadNum;
+
+	/* round down the stack top to the 8-byte boundary
     * NOTE: ARM Cortex-M stack grows down from hi -> low memory
     */
     uint32_t *sp = (uint32_t *)((((uint32_t)stkSto + stkSize) / 8) * 8);
@@ -169,11 +212,18 @@ void OSThread_start(
         *sp = 0xDEADBEEFU;
     }
 
-    // adição
-	me->periodo = periodo;
+
+    __disable_irq();
+
+    // adição para o EDF
+    me->periodo = periodo;
     me->timeout = periodo;
     me->deadline = OS_global_ticks + periodo;
-	// fim adição
+    // fim adição
+
+    // salva o id da thread para o trace
+    me->id = OS_threadNum;
+    trace_evt(TR_CREATE, me->id);
 
     /* register the thread with the OS */
     OS_thread[OS_threadNum] = me;
@@ -182,6 +232,9 @@ void OSThread_start(
         OS_readySet |= (1U << (OS_threadNum - 1U));
     }
     OS_threadNum++;
+
+    __enable_irq();
+
 }
 /***********************************************/
 void OS_onStartup(void) {
@@ -200,17 +253,8 @@ void OS_onIdle(void) {
 
 
 // funções adicionadas para o escalonador
-void OS_wait_period(void){
-    __disable_irq();
-    OS_readySet &= ~(1U << (OS_currIdx - 1U));
-    OS_sched();
-    __enable_irq();
-}
-
-void yield(void) {
-    __asm volatile ("cpsid i");
-    OS_sched();
-    __asm volatile ("cpsie i");
+void yield(void){
+    *(uint32_t volatile *)0xE000ED04 = (1U << 28);
 }
 
 OSSemaphore::OSSemaphore(int16_t initialCount) : count(initialCount), inicio(0), fim(0){
@@ -225,7 +269,11 @@ void OSSemaphore::wait(void){
         bloqueados[fim] = OS_curr;
         fim = (fim + 1) % 32;
         OS_readySet &= ~(1U << (OS_currIdx - 1U));
-        OS_sched();
+
+
+        trace_evt(TR_BLOCK, OS_currIdx);
+
+		OS_sched();
     }
     __asm volatile ("cpsie i");
 }
@@ -241,10 +289,14 @@ void OSSemaphore::signal(void){
         for (uint8_t i = 1; i < OS_threadNum; i++){
             if (OS_thread[i] == tarefa){
                 OS_readySet |= (1U << (i - 1U));
+
+                trace_evt(TR_READY, i);
+
                 break;
             }
         }
-        OS_sched();
+
+		OS_sched();
     }
     __asm volatile ("cpsie i");
 }
@@ -254,7 +306,7 @@ void OSSemaphore::signal(void){
 
 // funções adicionadas para prod cons
 void OSComunication::write(int32_t value){
-    empty.wait(); 
+    empty.wait();
     mutex.wait();
 
     // região crítica com fifo circular
@@ -278,7 +330,6 @@ int32_t OSComunication::read(){ // correção de sintaxe
     return value;
 }
 // fim fuções adicionadas para prod cons
-
 
 
 }//fim namespace
