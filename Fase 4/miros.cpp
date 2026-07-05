@@ -48,7 +48,6 @@ void OS_init(void *stkSto, uint32_t stkSize) {
 
 void OS_sched(void) {
 	__disable_irq();
-
 	if (OS_readySet == 0U) { /* idle condition? */
     	OS_currIdx = 0U; /* the idle thread */
     } else {
@@ -56,7 +55,6 @@ void OS_sched(void) {
     	// alteração para o EDF
     	uint32_t menor_dl = 0xFFFFFFFFU;
     	uint8_t menor_id = 0;
-
     	for(uint8_t i=1; i<OS_threadNum; i++){
     		if(OS_readySet & (1U <<(i - 1U))){
     			if(OS_thread[i]->deadline < menor_dl){
@@ -65,8 +63,8 @@ void OS_sched(void) {
     	        }
     	    }
     	}
-
     	OS_currIdx = menor_id;
+		
     	/* anteriormente esse trecho era para prioridade estática
     	do{ //find the next ready thread
             OS_currIdx++;
