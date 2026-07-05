@@ -140,8 +140,8 @@ void OS_tick(void) {
 void OS_wait_period(void){
     __disable_irq();
     OS_readySet &= ~(1U << (OS_currIdx - 1U));
-
-    trace_evt(TR_BLOCK, OS_currIdx); // marca como bloqueada
+	// marca como bloqueada
+    trace_evt(TR_BLOCK, OS_currIdx); 
 
     OS_sched();
     __enable_irq();
